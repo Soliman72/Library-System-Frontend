@@ -49,5 +49,21 @@ export const bookService = {
    */
   deleteBook(id) {
     return api.delete(`/books/${id}`);
+  },
+
+  /**
+   * Upload PDF file for a book
+   * @param {number|string} id - Book ID
+   * @param {File} file - The PDF file
+   * @returns {Promise<import('axios').AxiosResponse>}
+   */
+  uploadPdf(id, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/books/${id}/upload-pdf`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };

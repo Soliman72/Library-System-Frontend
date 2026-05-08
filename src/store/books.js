@@ -75,6 +75,19 @@ export const useBooksStore = defineStore('books', {
       } catch (e) {
         console.error('Error deleting book:', e)
       }
+    },
+
+    async uploadPdf(id, file) {
+      try {
+        const res = await bookService.uploadPdf(id, file)
+        const index = this.books.findIndex(b => b.id === id)
+        if (index !== -1) {
+          this.books[index] = res.data
+        }
+      } catch (e) {
+        console.error('Error uploading PDF:', e)
+        throw e
+      }
     }
   }
 })

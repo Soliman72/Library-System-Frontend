@@ -34,7 +34,13 @@
           :key="book.id" 
           :book="book"
         >
-          <button class="danger" @click="booksStore.deleteBook(book.id)">Delete Book</button>
+          <div class="admin-actions">
+            <div class="upload-btn-wrapper">
+              <button class="upload-btn">{{ book.pdfUrl ? 'Update PDF' : 'Upload PDF' }}</button>
+              <input type="file" accept="application/pdf" @change="uploadPdf(book.id, $event)" />
+            </div>
+            <button class="danger-btn" @click="booksStore.deleteBook(book.id)">Delete</button>
+          </div>
         </BookCard>
       </div>
     </div>
@@ -111,6 +117,19 @@ const deleteUser = async (id) => {
       console.error('Failed to delete user:', e)
       alert(e.response?.data?.message || 'Failed to delete user')
     }
+  }
+}
+
+const uploadPdf = async (bookId, event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  try {
+    await booksStore.uploadPdf(bookId, file)
+    alert('PDF Uploaded successfully!')
+  } catch (e) {
+    console.error('Upload failed:', e)
+    alert('Failed to upload PDF')
   }
 }
 </script>
@@ -288,5 +307,45 @@ tr td:last-child {
 .danger-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.upload-btn-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  flex: 1;
+}
+
+.upload-btn {
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--accent-primary);
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 100%;
+  transition: var(--transition);
+}
+
+.upload-btn-wrapper:hover .upload-btn {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.upload-btn-wrapper input[type=file] {
+  font-size: 100px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  cursor: pointer;
+  height: 100%;
 }
 </style>
