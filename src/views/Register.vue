@@ -1,305 +1,338 @@
 <template>
-  <div class="auth-container">
-    <div class="auth-shell glass-panel">
-      <section class="auth-aside">
-        <p class="eyebrow">Library System</p>
-        <h1>Create your professional workspace</h1>
-        <p class="aside-text">
-          Register to start managing your reading operations with secure, role-based access.
-        </p>
-      </section>
-
-      <section class="auth-card">
-        <h2>Create Account</h2>
-        <p class="subtitle">Set up your account in a few steps</p>
-
-        <div class="form-group">
-          <label>Full Name</label>
-          <input
-            v-model="name"
-            autocomplete="name"
-            placeholder="John Doe"
-          />
+  <div class="auth-page">
+    <div class="auth-card glass-panel animate-in">
+      <div class="auth-header">
+        <div class="logo-circle">
+          <i class="fas fa-user-plus"></i>
         </div>
+        <h1>Join the Library</h1>
+        <p>Create your account to start borrowing</p>
+      </div>
 
+      <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
-          <label>Email</label>
-          <input
-            v-model="email"
-            type="email"
-            autocomplete="email"
-            placeholder="name@company.com"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Password</label>
-          <div class="password-field">
-            <input
-              v-model="password"
-              :type="showPassword ? 'text' : 'password'"
-              autocomplete="new-password"
-              placeholder="Minimum 8 characters"
-              @keyup.enter="handleRegister"
+          <label for="name">Full Name</label>
+          <div class="input-wrapper">
+            <i class="fas fa-user"></i>
+            <input 
+              id="name"
+              v-model="name" 
+              type="text" 
+              placeholder="Enter your name" 
+              required
+              :disabled="auth.loading"
             />
-            <button
-              type="button"
-              class="toggle-password"
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="input-wrapper">
+            <i class="fas fa-envelope"></i>
+            <input 
+              id="email"
+              v-model="email" 
+              type="email" 
+              placeholder="Enter your email" 
+              required
+              :disabled="auth.loading"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <i class="fas fa-lock"></i>
+            <input 
+              id="password"
+              v-model="password" 
+              :type="showPassword ? 'text' : 'password'" 
+              placeholder="••••••••" 
+              required
+              :disabled="auth.loading"
+            />
+            <button 
+              type="button" 
+              class="toggle-visibility"
               @click="showPassword = !showPassword"
             >
-              {{ showPassword ? 'Hide' : 'Show' }}
+              <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
           </div>
-          <p class="field-hint">Password strength: <span :class="['strength', strengthLevel]">{{ strengthLabel }}</span></p>
         </div>
 
-        <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
-        <div v-if="successMsg" class="success-msg">{{ successMsg }}</div>
+        <div v-if="auth.error" class="error-banner">
+          <i class="fas fa-exclamation-circle"></i>
+          <span>{{ auth.error }}</span>
+        </div>
 
-        <button @click="handleRegister" class="auth-btn" :disabled="isLoading">
-          {{ isLoading ? 'Creating account...' : 'Create Account' }}
+        <button type="submit" class="primary-btn" :disabled="auth.loading">
+          <span v-if="!auth.loading">Create Account</span>
+          <span v-else class="loader"></span>
         </button>
+      </form>
 
-        <p class="auth-link">
-          Already have an account? <router-link to="/">Sign In</router-link>
-        </p>
-      </section>
+      <div class="auth-footer">
+        <p>Already have an account? <router-link to="/">Sign In</router-link></p>
+      </div>
     </div>
+    
+    <!-- Background Elements -->
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useAuthStore } from '../store/auth'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import { useAuthStore } from '../store/auth';
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const errorMsg = ref('')
-const successMsg = ref('')
-const isLoading = ref(false)
-const auth = useAuthStore()
-const router = useRouter()
-
-const strengthLevel = computed(() => {
-  const value = password.value
-  if (!value) return 'none'
-  if (value.length < 8) return 'weak'
-  if (/[A-Z]/.test(value) && /[0-9]/.test(value) && /[^a-zA-Z0-9]/.test(value)) return 'strong'
-  return 'medium'
-})
-
-const strengthLabel = computed(() => {
-  if (strengthLevel.value === 'none') return 'Not set'
-  if (strengthLevel.value === 'weak') return 'Weak'
-  if (strengthLevel.value === 'medium') return 'Medium'
-  return 'Strong'
-})
+const name = ref('');
+const email = ref('');
+const password = ref('');
+const showPassword = ref(false);
+const auth = useAuthStore();
 
 const handleRegister = async () => {
-  if (!name.value || !email.value || !password.value) {
-    errorMsg.value = 'Please fill in all fields'
-    return
-  }
-  if (password.value.length < 8) {
-    errorMsg.value = 'Password must be at least 8 characters'
-    return
-  }
-
-  errorMsg.value = ''
-  successMsg.value = ''
-  isLoading.value = true
-
   try {
-    await auth.register({ name: name.value, email: email.value, password: password.value })
-    successMsg.value = 'Registration successful. Redirecting to login...'
-    setTimeout(() => {
-      router.push('/')
-    }, 1200)
-  } catch (error) {
-    console.error('Register error:', error)
-    errorMsg.value = error.response?.data?.message || 'Failed to register. Please try again.'
-  } finally {
-    isLoading.value = false
+    await auth.register({
+      name: name.value,
+      email: email.value,
+      password: password.value
+    });
+  } catch (err) {
+    // Error is handled by store
   }
-}
+};
 </script>
 
 <style scoped>
-.auth-container {
+.auth-page {
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  width: 100%;
-  padding: 1.2rem;
-}
-
-.auth-shell {
-  width: min(500px, 100%);
-  min-height: auto;
-  display: block;
-  overflow: visible;
-  margin: 0 auto;
-}
-
-.auth-aside {
-  display: none;
-}
-
-.eyebrow {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: #99f6e4;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.auth-aside h1 {
-  font-size: 2rem;
-  line-height: 1.25;
-  margin-bottom: 1rem;
-}
-
-.aside-text {
-  color: var(--text-secondary);
-  max-width: 34ch;
+  background: #0f172a;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
 }
 
 .auth-card {
-  padding: 2rem 1.8rem;
+  width: 100%;
+  max-width: 440px;
+  padding: 3rem;
+  z-index: 10;
+  border-radius: 24px;
+  background: rgba(30, 41, 59, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-h2 {
-  font-size: 1.65rem;
-  margin-bottom: 0.35rem;
-  color: var(--text-primary);
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
 }
 
-.subtitle {
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-  font-size: 0.92rem;
+.logo-circle {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 1.8rem;
+  color: white;
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.5);
+}
+
+h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+}
+
+.auth-header p {
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .form-group {
-  margin-bottom: 1rem;
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.8rem;
+label {
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #cbd5e1;
 }
 
-.password-field {
+.input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.password-field input {
-  padding-right: 5.2rem;
-}
-
-.toggle-password {
+.input-wrapper i:not(.fas-eye) {
   position: absolute;
-  right: 0.35rem;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0.38rem 0.6rem;
-  font-size: 0.78rem;
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--text-secondary);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  left: 1rem;
+  color: #64748b;
+  font-size: 1rem;
 }
 
-.toggle-password:hover {
-  background: rgba(148, 163, 184, 0.2);
-  color: var(--text-primary);
-}
-
-.field-hint {
-  margin-top: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--text-tertiary);
-}
-
-.strength {
-  font-weight: 700;
-}
-
-.strength.weak {
-  color: var(--danger);
-}
-
-.strength.medium {
-  color: var(--warning);
-}
-
-.strength.strong {
-  color: var(--success);
-}
-
-.strength.none {
-  color: var(--text-tertiary);
-}
-
-.auth-btn {
+input {
   width: 100%;
-  margin-top: 0.65rem;
-  padding: 0.82rem;
+  padding: 0.9rem 1rem 0.9rem 2.8rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  transition: all 0.2s;
 }
 
-.auth-link {
-  margin-top: 1.05rem;
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  text-align: center;
+input:focus {
+  outline: none;
+  border-color: #10b981;
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
 }
 
-.auth-link a {
-  color: var(--accent-primary);
-  text-decoration: none;
+.toggle-visibility {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.primary-btn {
+  background: linear-gradient(to right, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 12px;
   font-weight: 700;
-  transition: var(--transition);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
 }
 
-.auth-link a:hover {
-  color: var(--accent-secondary);
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
 }
 
-.error-msg,
-.success-msg {
-  font-size: 0.84rem;
-  margin-top: 0.25rem;
-  margin-bottom: 0.75rem;
-  text-align: left;
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--radius-sm);
+.primary-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
-.error-msg {
-  color: var(--danger);
-  background: rgba(239, 68, 68, 0.14);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+.primary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-.success-msg {
-  color: var(--success);
-  background: rgba(16, 185, 129, 0.16);
-  border: 1px solid rgba(16, 185, 129, 0.35);
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
 }
 
-@media (max-width: 900px) {
-  .auth-container {
-    padding: 0.9rem;
+.auth-footer a {
+  color: #10b981;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.error-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+/* Background Blobs */
+.bg-blob {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 1;
+  opacity: 0.4;
+}
+
+.blob-1 {
+  background: #10b981;
+  top: -100px;
+  right: -100px;
+}
+
+.blob-2 {
+  background: #3b82f6;
+  bottom: -100px;
+  left: -100px;
+}
+
+/* Animations */
+.animate-in {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loader {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 2rem;
   }
 }
 </style>

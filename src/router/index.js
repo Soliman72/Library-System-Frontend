@@ -53,14 +53,16 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  authStore.init()
   
-  if (to.meta.requiresAuth && !authStore.user) {
+  const isAuthenticated = !!authStore.token
+  const userRole = authStore.role
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
     next('/')
-  } else if (to.meta.requiresGuest && authStore.user) {
-    next(authStore.user.role === 'ADMIN' ? '/admin/dashboard' : '/member/home')
-  } else if (to.meta.requiresAuth && to.meta.role && authStore.user.role !== to.meta.role) {
-    next(authStore.user.role === 'ADMIN' ? '/admin/dashboard' : '/member/home')
+  } else if (to.meta.requiresGuest && isAuthenticated) {
+    next(userRole === 'ADMIN' ? '/admin/dashboard' : '/member/home')
+  } else if (to.meta.requiresAuth && to.meta.role && userRole !== to.meta.role) {
+    next(userRole === 'ADMIN' ? '/admin/dashboard' : '/member/home')
   } else {
     next()
   }

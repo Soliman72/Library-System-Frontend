@@ -6,7 +6,8 @@ export const useBorrowsStore = defineStore('borrows', {
     myBorrows: [],
     allBorrows: [], // for admin
     totalPages: 0,
-    currentPage: 0
+    currentPage: 0,
+    loading: false
   }),
 
   actions: {
@@ -30,15 +31,19 @@ export const useBorrowsStore = defineStore('borrows', {
     },
 
     async fetchMyBorrows() {
+      this.loading = true
       try {
         const res = await borrowService.getMyBorrows()
         this.myBorrows = res.data
       } catch (e) {
         console.error('Error fetching my borrows:', e)
+      } finally {
+        this.loading = false
       }
     },
 
     async fetchAllBorrows(page = 0, size = 10) {
+      this.loading = true
       try {
         const res = await borrowService.getAllBorrows(page, size)
         if (res.data.content) {
@@ -46,10 +51,12 @@ export const useBorrowsStore = defineStore('borrows', {
           this.totalPages = res.data.totalPages
           this.currentPage = res.data.number
         } else {
-          this.allBorrows = res.data // Fallback
+          this.allBorrows = res.data
         }
       } catch (e) {
         console.error('Error fetching all borrows:', e)
+      } finally {
+        this.loading = false
       }
     },
 

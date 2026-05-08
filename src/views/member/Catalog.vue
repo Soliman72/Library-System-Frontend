@@ -1,40 +1,75 @@
 <template>
-  <div class="catalog-page">
+  <div class="catalog-page animate-in">
     <div class="page-header">
-      <h1>Library Catalog</h1>
-      <p>Discover our vast collection of books</p>
+      <div class="header-content">
+        <h1>Digital Explorer</h1>
+        <p>Browse our collection of digital licenses and expand your knowledge.</p>
+      </div>
+      <div class="search-wrapper glass-panel">
+        <i class="fas fa-search"></i>
+        <input 
+          v-model="search" 
+          placeholder="Search by title, author or category..." 
+          @input="handleSearch"
+        />
+      </div>
     </div>
 
-    <div class="search-bar glass-panel">
-      <span class="icon">🔍</span>
-      <input v-model="search" placeholder="Search by title or author..." />
+    <div v-if="booksStore.loading" class="loading-state">
+      <div class="loader"></div>
+      <p>Curating your library...</p>
     </div>
 
-    <div class="catalog-grid">
+    <div v-else-if="booksStore.books.length === 0" class="empty-state glass-panel">
+      <i class="fas fa-book-open"></i>
+      <h3>No books found</h3>
+      <p>Try adjusting your search or check back later.</p>
+    </div>
+
+    <div v-else class="catalog-grid">
       <div v-for="book in booksStore.books" :key="book.id" class="book-card glass-panel">
-        <div class="cover-wrapper">
-          <img :src="book.coverImageUrl || 'https://via.placeholder.com/200x300/1e293b/94a3b8?text=No+Cover'" class="cover" />
-          <div class="status-badge" :class="book.availableCopies > 0 ? 'available' : 'unavailable'">
-            {{ book.availableCopies > 0 ? `Available (${book.availableCopies})` : 'Out of Stock' }}
+        <div class="card-media">
+          <img 
+            :src="book.coverImageUrl || 'https://images.unsplash.com/photo-1543005123-8618e50b16fe?q=80&w=2574&auto=format&fit=crop'" 
+            class="cover-img"
+            loading="lazy"
+          />
+          <div class="category-tag">{{ book.category || 'General' }}</div>
+          <div class="availability-badge" :class="{ 'out-of-stock': book.availableCopies === 0 }">
+            {{ book.availableCopies > 0 ? `${book.availableCopies} Copies Left` : 'Out of Stock' }}
           </div>
         </div>
-        
-        <div class="info">
-          <h3>{{ book.title }}</h3>
-          <p class="author">{{ book.author }}</p>
-          <span class="category" v-if="book.category">{{ book.category }}</span>
-        </div>
 
-        <div class="actions">
-          <template v-if="isBorrowedByMe(book.id)">
-            <button class="return-btn" @click="returnBook(book.id)">Return Book</button>
-          </template>
-          <template v-else-if="book.availableCopies > 0">
-            <button class="success borrow-btn" @click="borrow(book.id)">Borrow Book</button>
-          </template>
-          <template v-else>
-            <button class="disabled-btn" disabled>Unavailable</button>
-          </template>
+        <div class="card-body">
+          <div class="card-meta">
+            <h3 class="title">{{ book.title }}</h3>
+            <p class="author">by {{ book.author }}</p>
+          </div>
+
+          <div class="card-actions">
+            <button 
+              v-if="isBorrowed(book.id)" 
+              class="action-btn secondary-btn"
+              @click="goToMyBooks"
+            >
+              <i class="fas fa-bookmark"></i>
+              Already Borrowed
+            </button>
+            <button 
+              v-else-if="book.availableCopies > 0" 
+              class="action-btn primary-btn"
+              @click="handleBorrow(book.id)"
+              :disabled="borrowingId === book.id"
+            >
+              <i v-if="borrowingId !== book.id" class="fas fa-hand-holding"></i>
+              <span v-if="borrowingId !== book.id">Borrow License</span>
+              <span v-else class="loader-sm"></span>
+            </button>
+            <button v-else class="action-btn disabled-btn" disabled>
+              <i class="fas fa-times-circle"></i>
+              Waitlist Only
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -42,205 +77,301 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
-import { useBooksStore } from '../../store/books'
-import { useBorrowsStore } from '../../store/borrows'
+import { ref, onMounted } from 'vue';
+import { useBooksStore } from '../../store/books';
+import { useBorrowsStore } from '../../store/borrows';
+import { useRouter } from 'vue-router';
 
-const booksStore = useBooksStore()
-const borrowsStore = useBorrowsStore()
-const search = ref('')
+const booksStore = useBooksStore();
+const borrowsStore = useBorrowsStore();
+const router = useRouter();
 
-onMounted(() => {
-  booksStore.fetchBooks()
-  borrowsStore.fetchMyBorrows()
-})
+const search = ref('');
+const borrowingId = ref(null);
 
-const isBorrowedByMe = (bookId) => {
-  return borrowsStore.myBorrows.some(b => b.bookId === bookId && b.status === 'BORROWED')
-}
+onMounted(async () => {
+  await Promise.all([
+    booksStore.fetchBooks(),
+    borrowsStore.fetchMyBorrows()
+  ]);
+});
 
-const borrow = async (id) => {
-  await borrowsStore.borrowBook(id)
-  await booksStore.fetchBooks()
-}
+const isBorrowed = (bookId) => {
+  return borrowsStore.myBorrows.some(b => b.bookId === bookId && b.status === 'BORROWED');
+};
 
-const returnBook = async (id) => {
-  await borrowsStore.returnBook(id)
-  await booksStore.fetchBooks()
-}
+const handleSearch = () => {
+  // Logic is handled by the store's search action with a debounce
+  booksStore.searchBooks(search.value);
+};
 
-let searchTimeout;
-watch(search, (newVal) => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    booksStore.searchBooks(newVal);
-  }, 300);
-})
+const handleBorrow = async (id) => {
+  borrowingId.value = id;
+  try {
+    await borrowsStore.borrowBook(id);
+    await booksStore.fetchBooks();
+  } catch (err) {
+    console.error('Borrow failed:', err);
+  } finally {
+    borrowingId.value = null;
+  }
+};
+
+const goToMyBooks = () => {
+  router.push('/member/borrows');
+};
 </script>
 
 <style scoped>
+.catalog-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
 .page-header {
-  margin-bottom: 1.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 3rem;
+  gap: 2rem;
 }
 
-.page-header h1 {
-  font-size: 2rem;
+.header-content h1 {
+  font-size: 2.5rem;
   font-weight: 800;
+  color: white;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
 }
 
-.page-header p {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+.header-content p {
+  color: #94a3b8;
+  font-size: 1.1rem;
 }
 
-.search-bar {
+.search-wrapper {
+  flex: 1;
+  max-width: 500px;
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
-  margin-bottom: 1.8rem;
-  border-radius: var(--radius-md);
-  background: #ffffff;
-  border: 1px solid #dbe3f1;
-  transition: var(--transition);
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.search-bar:focus-within {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+.search-wrapper:focus-within {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
 }
 
-.search-bar .icon {
-  font-size: 1.25rem;
-  color: var(--accent-primary);
-  opacity: 0.8;
+.search-wrapper i {
+  color: #64748b;
+  margin-right: 1rem;
 }
 
-.search-bar input {
+.search-wrapper input {
+  width: 100%;
+  padding: 1.2rem 0;
+  background: none;
   border: none;
-  background: transparent;
-  box-shadow: none !important;
-  padding: 1rem;
-  font-weight: 500;
+  color: white;
+  font-size: 1rem;
 }
 
+.search-wrapper input:focus {
+  outline: none;
+}
+
+/* Grid & Cards */
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
 }
 
 .book-card {
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-  border-radius: var(--radius-md);
-  background: var(--surface);
 }
 
 .book-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-10px);
+  background: rgba(30, 41, 59, 0.6);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
 }
 
-.cover-wrapper {
+.card-media {
   position: relative;
-  width: 100%;
-  height: 260px;
+  height: 380px;
   overflow: hidden;
 }
 
-.cover {
+.cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.6s ease;
 }
 
-.book-card:hover .cover {
+.book-card:hover .cover-img {
   transform: scale(1.05);
 }
 
-.status-badge {
+.category-tag {
   position: absolute;
   top: 1.25rem;
-  right: 1.25rem;
+  left: 1.25rem;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  color: white;
   padding: 0.4rem 1rem;
   border-radius: 10px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  backdrop-filter: blur(12px);
-  z-index: 2;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.status-badge.available {
-  background: rgba(5, 150, 105, 0.9);
-  color: #ffffff;
-}
-
-.status-badge.unavailable {
-  background: rgba(239, 68, 68, 0.85);
-  color: white;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-}
-
-.info {
-  padding: 1rem;
-  flex: 1;
-}
-
-.info h3 {
-  font-size: 1rem;
+.availability-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  padding: 2rem 1.25rem 1.25rem;
+  color: #10b981;
+  font-size: 0.85rem;
   font-weight: 700;
-  margin-bottom: 0.35rem;
-  line-height: 1.3;
+  text-align: right;
+}
+
+.availability-badge.out-of-stock {
+  color: #f87171;
+}
+
+.card-body {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.4rem;
+  line-height: 1.4;
 }
 
 .author {
-  font-size: 0.86rem;
-  color: var(--text-secondary);
-  margin-bottom: 1.25rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
 }
 
-.category {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 0.25rem 0.75rem;
-  border-radius: 8px;
-  color: var(--accent-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.actions {
-  padding: 1rem;
-  padding-top: 0;
-}
-
-.actions button {
+.action-btn {
   width: 100%;
-  font-weight: 800;
+  padding: 0.9rem;
+  border-radius: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
 }
 
-.return-btn {
-  background: transparent;
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  color: var(--accent-secondary);
+.primary-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
 }
 
-.return-btn:hover {
-  background: rgba(52, 211, 153, 0.1);
-  border-color: var(--accent-secondary);
+.primary-btn:hover {
+  box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+  transform: scale(1.02);
+}
+
+.secondary-btn {
+  background: rgba(51, 65, 85, 0.4);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.secondary-btn:hover {
+  background: rgba(51, 65, 85, 0.6);
   color: white;
 }
 
 .disabled-btn {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
-  opacity: 0.5;
+  background: rgba(51, 65, 85, 0.2);
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+/* States */
+.loading-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 2rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+  margin-bottom: 1.5rem;
+}
+
+.loader-sm {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s infinite linear;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .search-wrapper {
+    max-width: 100%;
+  }
 }
 </style>

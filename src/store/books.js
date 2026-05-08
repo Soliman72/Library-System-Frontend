@@ -6,11 +6,13 @@ export const useBooksStore = defineStore('books', {
     books: [],
     totalPages: 0,
     currentPage: 0,
-    searchQuery: ''
+    searchQuery: '',
+    loading: false
   }),
 
   actions: {
     async fetchBooks(page = 0, size = 10) {
+      this.loading = true
       try {
         const res = await bookService.getBooks(page, size)
         if (res.data.content) {
@@ -18,25 +20,30 @@ export const useBooksStore = defineStore('books', {
           this.totalPages = res.data.totalPages
           this.currentPage = res.data.number
         } else {
-          this.books = res.data // Fallback if no pagination wrap
+          this.books = res.data
         }
       } catch (e) {
         console.error('Error fetching books:', e)
+      } finally {
+        this.loading = false
       }
     },
 
     async searchBooks(keyword) {
+      this.loading = true
       try {
         this.searchQuery = keyword
         if (!keyword) {
           return this.fetchBooks(0)
         }
         const res = await bookService.searchBooks(keyword)
-        this.books = res.data // Search might not be paginated
+        this.books = res.data
         this.totalPages = 1
         this.currentPage = 0
       } catch (e) {
         console.error('Error searching books:', e)
+      } finally {
+        this.loading = false
       }
     },
 

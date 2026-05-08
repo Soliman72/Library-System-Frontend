@@ -1,87 +1,111 @@
-import { defineStore } from 'pinia'
-import { authService } from '../services/authService'
-import { userService } from '../services/userService'
+import { defineStore } from 'pinia';
+import api from '../services/api';
+import router from '../router';
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null, // { id, name, email, role }
-    token: localStorage.getItem('token') || null,
-    users: [], // for admin view
-    totalUsersPage: 0,
-    currentUsersPage: 0
-  }),
+    state: () => ({
+        user: JSON.parse(localStorage.getItem('user')) || null,
+        token: localStorage.getItem('token') || null,
+        role: localStorage.getItem('role') || null,
+        users: [], // List of users for admin management
+        loading: false,
+        error: null
+    }),
 
-  getters: {
-    isAdmin: (state) => state.user?.role === 'ADMIN',
-    isAuthenticated: (state) => !!state.token
-  },
-
-  actions: {
-    init() {
-      const token = localStorage.getItem('token')
-      const role = localStorage.getItem('role')
-      if (token && !this.user) {
-        this.token = token
-        // Optimistically set the role so router guards work immediately
-        this.user = { role }
-        this.fetchProfile().catch(() => {
-          this.logout()
-        })
-      }
+    getters: {
+        isAuthenticated: (state) => !!state.token,
+        isAdmin: (state) => state.role === 'ADMIN',
+        isMember: (state) => state.role === 'MEMBER'
     },
 
-    async login(credentials) {
-      const res = await authService.login(credentials)
-      const data = res.data
-      
-      this.token = data.token
-      this.user = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.role
-      }
-      
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('role', data.role)
-    },
+    actions: {
+        // ==========================================
+        // Login Action
+        // ==========================================
+        async login(credentials) {
+            this.loading = true;
+            this.error = null;
+            try {
+                const response = await api.post('/auth/login', credentials);
+                const { token, id, name, email, role } = response.data;
 
-    async register(data) {
-      await authService.register(data)
-      // Login must be done separately after register per spec
-    },
+                this.token = token;
+                this.role = role;
+                this.user = { id, name, email };
 
-    async fetchProfile() {
-      const res = await userService.getProfile()
-      this.user = { ...this.user, ...res.data }
-    },
+                localStorage.setItem('token', token);
+                localStorage.setItem('role', role);
+                localStorage.setItem('user', JSON.stringify(this.user));
 
-    async updateProfile(data) {
-      const res = await userService.updateProfile(data)
-      this.user = { ...this.user, ...res.data }
-    },
+                // Redirect based on role
+                if (role === 'ADMIN') {
+                    router.push('/admin/dashboard');
+                } else {
+                    router.push('/member/home');
+                }
+            } catch (err) {
+                this.error = err.response?.data?.message || 'Login failed';
+                throw err;
+            } finally {
+                this.loading = false;
+            }
+        },
 
-    async fetchAllUsers(page = 0, size = 10) {
-      const res = await userService.getUsers(page, size)
-      if (res.data.content) {
-        this.users = res.data.content // Spring Boot Page object
-        this.totalUsersPage = res.data.totalPages
-        this.currentUsersPage = res.data.number
-      } else {
-        this.users = res.data // Fallback
-      }
-    },
+        // ==========================================
+        // Registration Action
+        // ==========================================
+        async register(userData) {
+            this.loading = true;
+            this.error = null;
+            try {
+                await api.post('/auth/register', userData);
+                router.push('/login');
+            } catch (err) {
+                this.error = err.response?.data?.message || 'Registration failed';
+                throw err;
+            } finally {
+                this.loading = false;
+            }
+        },
 
-    async deleteUser(id) {
-      await userService.deleteUser(id)
-      this.users = this.users.filter(u => u.id !== id)
-    },
+        // ==========================================
+        // Logout Action
+        // ==========================================
+        logout() {
+            this.token = null;
+            this.role = null;
+            this.user = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('user');
+            router.push('/login');
+        },
 
-    logout() {
-      this.user = null
-      this.token = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('role')
+        // ==========================================
+        // User Management (Admin Only)
+        // ==========================================
+        async fetchAllUsers() {
+            this.loading = true;
+            try {
+                const { userService } = await import('../services/userService');
+                const response = await userService.getUsers();
+                this.users = response.data;
+            } catch (err) {
+                console.error('Failed to fetch users:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async deleteUser(userId) {
+            try {
+                const { userService } = await import('../services/userService');
+                await userService.deleteUser(userId);
+                this.users = this.users.filter(u => u.id !== userId);
+            } catch (err) {
+                console.error('Failed to delete user:', err);
+                throw err;
+            }
+        }
     }
-  }
-})
+});
