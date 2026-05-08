@@ -20,8 +20,8 @@
           <tr v-for="user in authStore.users" :key="user.id">
             <td>#{{ user.id }}</td>
             <td class="user-name">
-              <div class="avatar-small">{{ user.name.substring(0, 2).toUpperCase() }}</div>
-              {{ user.name }}
+              <div class="avatar-small">{{ user.name ? user.name.substring(0, 2).toUpperCase() : '??' }}</div>
+              {{ user.name || 'Anonymous' }}
             </td>
             <td>{{ user.email }}</td>
             <td><span :class="['role-badge', user.role?.toLowerCase() || '']">{{ user.role || 'Unknown' }}</span></td>

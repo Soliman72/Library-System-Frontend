@@ -5,8 +5,8 @@
         <div class="logo-circle">
           <i class="fas fa-user-plus"></i>
         </div>
-        <h1>Join the Library</h1>
-        <p>Create your account to start borrowing</p>
+        <h1>Create Your Account</h1>
+        <p>Join the library to start borrowing books</p>
       </div>
 
       <form @submit.prevent="handleRegister" class="auth-form">
@@ -110,6 +110,7 @@ const handleRegister = async () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

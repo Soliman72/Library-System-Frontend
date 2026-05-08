@@ -2,8 +2,8 @@
   <div class="dashboard animate-in">
     <div class="page-header">
       <div class="header-content">
-        <h1>Command Center</h1>
-        <p>Real-time analytics and system oversight for the E-Library network.</p>
+        <h1>Admin Dashboard</h1>
+        <p>Real-time analytics and system oversight for the library network.</p>
       </div>
       <div class="date-badge glass-panel">
         <i class="fas fa-calendar-day"></i>
@@ -15,7 +15,7 @@
       <div class="stat-card glass-panel card-blue">
         <div class="card-icon"><i class="fas fa-layer-group"></i></div>
         <div class="card-data">
-          <h3>Total Titles</h3>
+          <h3>Total Books</h3>
           <p class="value">{{ stats.totalBooks }}</p>
           <span class="trend"><i class="fas fa-arrow-up"></i> +2 this week</span>
         </div>
@@ -77,10 +77,12 @@ onMounted(async () => {
       api.get('/borrows')
     ]);
     
+    const borrowsData = Array.isArray(borrowsRes.data) ? borrowsRes.data : (borrowsRes.data.content || []);
+    
     stats.value = {
-      totalBooks: booksRes.data.totalElements || 0,
+      totalBooks: booksRes.data.totalElements || booksRes.data.length || 0,
       totalUsers: usersRes.data.length || 0,
-      activeBorrows: (borrowsRes.data || []).filter(b => b.status === 'BORROWED').length
+      activeBorrows: borrowsData.filter(b => b.status === 'BORROWED').length
     };
   } catch (err) {
     console.error('Failed to fetch dashboard stats:', err);

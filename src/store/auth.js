@@ -89,7 +89,11 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const { userService } = await import('../services/userService');
                 const response = await userService.getUsers();
-                this.users = response.data;
+                if (response.data.content) {
+                    this.users = response.data.content;
+                } else {
+                    this.users = response.data;
+                }
             } catch (err) {
                 console.error('Failed to fetch users:', err);
             } finally {

@@ -2,7 +2,7 @@
   <div class="layout">
     <aside class="sidebar glass-panel">
       <div class="brand">
-        <h2>LibSys<span class="dot">.</span></h2>
+        <h2>LibSystem<span class="dot">.</span></h2>
       </div>
       <nav class="nav-menu">
         <router-link to="/admin/dashboard" class="nav-item">Dashboard</router-link>

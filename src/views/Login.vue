@@ -5,8 +5,8 @@
         <div class="logo-circle">
           <i class="fas fa-book-reader"></i>
         </div>
-        <h1>Digital Library</h1>
-        <p>Sign in to access your e-books</p>
+        <h1>Library Management System</h1>
+        <p>Sign in to access your dashboard</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="auth-form">
@@ -26,10 +26,7 @@
         </div>
 
         <div class="form-group">
-          <div class="label-row">
-            <label for="password">Password</label>
-            <a href="#" class="forgot-link">Forgot?</a>
-          </div>
+          <label for="password">Password</label>
           <div class="input-wrapper">
             <i class="fas fa-lock"></i>
             <input 
@@ -96,6 +93,7 @@ const handleLogin = async () => {
 <style scoped>
 .auth-page {
   min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -159,23 +157,10 @@ h1 {
   gap: 0.6rem;
 }
 
-.label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #cbd5e1;
-}
-
-.forgot-link {
-  font-size: 0.8rem;
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
 }
 
 .input-wrapper {

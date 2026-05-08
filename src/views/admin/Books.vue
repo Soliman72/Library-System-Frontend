@@ -2,22 +2,22 @@
   <div class="admin-books animate-in">
     <div class="page-header">
       <div class="header-info">
-        <h1>Inventory Control</h1>
-        <p>Manage digital licenses, track availability, and upload manuscript PDFs.</p>
+        <h1>Books Management</h1>
+        <p>Manage library collection, track availability, and upload book PDFs.</p>
       </div>
       <button @click="openAddModal" class="primary-btn">
         <i class="fas fa-plus"></i>
-        Add New Manuscript
+        Add New Book
       </button>
     </div>
 
     <div class="stats-overview">
       <div class="stat-card glass-panel">
-        <span class="label">Total Manuscripts</span>
+        <span class="label">Total Books</span>
         <span class="value">{{ booksStore.books.length }}</span>
       </div>
       <div class="stat-card glass-panel">
-        <span class="label">Total Licenses</span>
+        <span class="label">Total Copies</span>
         <span class="value">{{ totalLicenses }}</span>
       </div>
       <div class="stat-card glass-panel">
@@ -30,9 +30,9 @@
       <table class="inventory-table">
         <thead>
           <tr>
-            <th>Manuscript</th>
+            <th>Book Details</th>
             <th>Category</th>
-            <th>Licenses</th>
+            <th>Available Copies</th>
             <th>Digital Content</th>
             <th>Actions</th>
           </tr>
@@ -75,7 +75,7 @@
                 <button @click="openEditModal(book)" class="icon-btn edit" title="Edit Info">
                   <i class="fas fa-edit"></i>
                 </button>
-                <button @click="handleDelete(book.id)" class="icon-btn delete" title="Remove Manuscript">
+                <button @click="handleDelete(book.id)" class="icon-btn delete" title="Remove Book">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -98,17 +98,17 @@
     <div v-if="showModal" class="modal-overlay animate-fade">
       <div class="modal-card glass-panel">
         <div class="modal-header">
-          <h2>{{ isEditing ? 'Edit Manuscript' : 'Add New Manuscript' }}</h2>
+          <h2>{{ isEditing ? 'Edit Book Info' : 'Add New Book' }}</h2>
           <button @click="showModal = false" class="close-btn"><i class="fas fa-times"></i></button>
         </div>
         <form @submit.prevent="saveBook" class="modal-form">
           <div class="form-group">
-            <label>Manuscript Title</label>
-            <input v-model="form.title" placeholder="e.g. Beyond the Horizon" required />
+            <label>Book Title</label>
+            <input v-model="form.title" placeholder="Enter book title" required />
           </div>
           <div class="form-group">
-            <label>Author / Publisher</label>
-            <input v-model="form.author" placeholder="e.g. John Doe" required />
+            <label>Author Name</label>
+            <input v-model="form.author" placeholder="Enter author name" required />
           </div>
           <div class="form-grid">
             <div class="form-group">
@@ -118,7 +118,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>License Count</label>
+              <label>Total Copies</label>
               <input v-model="form.totalCopies" type="number" min="1" required />
             </div>
           </div>
@@ -130,7 +130,7 @@
           <div class="modal-footer">
             <button type="button" @click="showModal = false" class="secondary-btn">Cancel</button>
             <button type="submit" class="primary-btn" :disabled="loading">
-              {{ loading ? 'Processing...' : 'Save Manuscript' }}
+              {{ loading ? 'Processing...' : 'Save Changes' }}
             </button>
           </div>
         </form>
@@ -204,7 +204,7 @@ const saveBook = async () => {
 };
 
 const handleDelete = async (id) => {
-  if (confirm('Are you sure you want to remove this manuscript and all its digital licenses?')) {
+  if (confirm('Are you sure you want to remove this book and all its copies?')) {
     await booksStore.deleteBook(id);
     booksStore.fetchBooks();
   }
