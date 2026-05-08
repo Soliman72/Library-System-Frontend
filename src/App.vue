@@ -1,26 +1,11 @@
 <template>
-  <div id="app">
-    <Navbar />
-    <main class="main-content">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </main>
-  </div>
+  <router-view />
 </template>
 
 <script setup>
-import Navbar from './components/Navbar.vue'
+// Layouts and routing are handled by vue-router now
 </script>
 
 <style>
-.main-content {
-  flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
+/* Global styles in style.css */
 </style>

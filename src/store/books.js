@@ -1,57 +1,72 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import { bookService } from '../services/bookService'
 
 export const useBooksStore = defineStore('books', {
   state: () => ({
-    books: []
+    books: [],
+    totalPages: 0,
+    currentPage: 0,
+    searchQuery: ''
   }),
 
   actions: {
-    async fetchBooks() {
+    async fetchBooks(page = 0, size = 10) {
       try {
-        const res = await axios.get('/api/books')
-        this.books = res.data
-      } catch(e) {}
+        const res = await bookService.getBooks(page, size)
+        if (res.data.content) {
+          this.books = res.data.content
+          this.totalPages = res.data.totalPages
+          this.currentPage = res.data.number
+        } else {
+          this.books = res.data // Fallback if no pagination wrap
+        }
+      } catch (e) {
+        console.error('Error fetching books:', e)
+      }
+    },
+
+    async searchBooks(keyword) {
+      try {
+        this.searchQuery = keyword
+        if (!keyword) {
+          return this.fetchBooks(0)
+        }
+        const res = await bookService.searchBooks(keyword)
+        this.books = res.data // Search might not be paginated
+        this.totalPages = 1
+        this.currentPage = 0
+      } catch (e) {
+        console.error('Error searching books:', e)
+      }
     },
 
     async addBook(book) {
       try {
-        await axios.post('/api/books', book)
-      } catch(e) {}
-      this.books.push({
-        id: Date.now(),
-        ...book,
-        available: true,
-        borrowedBy: null
-      })
+        const res = await bookService.addBook(book)
+        this.books.push(res.data)
+      } catch (e) {
+        console.error('Error adding book:', e)
+      }
+    },
+
+    async updateBook(id, bookData) {
+      try {
+        const res = await bookService.updateBook(id, bookData)
+        const index = this.books.findIndex(b => b.id === id)
+        if (index !== -1) {
+          this.books[index] = res.data
+        }
+      } catch (e) {
+        console.error('Error updating book:', e)
+      }
     },
 
     async deleteBook(id) {
       try {
-        await axios.delete(`/api/books/${id}`)
-      } catch(e) {}
-      this.books = this.books.filter(b => b.id !== id)
-    },
-
-    async borrowBook(id, userId) {
-      try {
-        await axios.post(`/api/borrow/${id}`, { userId })
-      } catch(e) {}
-      const book = this.books.find(b => b.id === id)
-      if (book) {
-        book.available = false
-        book.borrowedBy = userId
-      }
-    },
-
-    async returnBook(id) {
-      try {
-        await axios.post(`/api/return/${id}`)
-      } catch(e) {}
-      const book = this.books.find(b => b.id === id)
-      if (book) {
-        book.available = true
-        book.borrowedBy = null
+        await bookService.deleteBook(id)
+        this.books = this.books.filter(b => b.id !== id)
+      } catch (e) {
+        console.error('Error deleting book:', e)
       }
     }
   }
